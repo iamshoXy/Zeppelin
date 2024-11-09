@@ -1,12 +1,22 @@
-import { commandTypeHelpers as ct } from "../../../commandTypes.js";
-import { CaseTypes } from "../../../data/CaseTypes.js";
-import { Case } from "../../../data/entities/Case.js";
-import { CasesPlugin } from "../../../plugins/Cases/CasesPlugin.js";
-import { canActOn, hasPermission, sendErrorMessage, sendSuccessMessage } from "../../../pluginUtils.js";
-import { renderUsername, resolveMember, resolveUser } from "../../../utils.js";
-import { LogsPlugin } from "../../Logs/LogsPlugin.js";
-import { formatReasonWithAttachments } from "../functions/formatReasonWithAttachments.js";
-import { modActionsCmd } from "../types.js";
+import { commandTypeHelpers as ct } from "../../../commandTypes";
+import { CaseTypes } from "../../../data/CaseTypes";
+import { Case } from "../../../data/entities/Case";
+import { CasesPlugin } from "../../../plugins/Cases/CasesPlugin";
+import {
+  canActOn,
+  hasPermission,
+  sendErrorMessage,
+  sendSuccessMessage,
+} from "../../../pluginUtils";
+import {
+  renderUsername,
+  resolveMember,
+  resolveRoleId,
+  resolveUser,
+} from "../../../utils";
+import { LogsPlugin } from "../../Logs/LogsPlugin";
+import { formatReasonWithAttachments } from "../functions/formatReasonWithAttachments";
+import { modActionsCmd } from "../types";
 
 const opts = {
   mod: ct.member({ option: true }),
@@ -15,7 +25,8 @@ const opts = {
 export const AddCaseCmd = modActionsCmd({
   trigger: "addcase",
   permission: "can_addcase",
-  description: "Add an arbitrary case to the specified user without taking any action",
+  description:
+    "Add an arbitrary case to the specified user without taking any action",
 
   signature: [
     {
@@ -34,18 +45,44 @@ export const AddCaseCmd = modActionsCmd({
       return;
     }
 
+    const staffMember = await resolveMember(
+      pluginData.client,
+      pluginData.guild,
+      msg.author.id
+    );
+    if (!staffMember) return;
+    if (
+      staffMember.roles.cache.has("1266486986479501322") &&
+      user.id !== "1265712821543632987"
+    )
+      return;
+
     // If the user exists as a guild member, make sure we can act on them first
-    const member = await resolveMember(pluginData.client, pluginData.guild, user.id);
+    const member = await resolveMember(
+      pluginData.client,
+      pluginData.guild,
+      user.id
+    );
     if (member && !canActOn(pluginData, msg.member, member)) {
-      sendErrorMessage(pluginData, msg.channel, "Cannot add case on this user: insufficient permissions");
+      sendErrorMessage(
+        pluginData,
+        msg.channel,
+        "Cannot add case on this user: insufficient permissions"
+      );
       return;
     }
 
     // The moderator who did the action is the message author or, if used, the specified -mod
     let mod = msg.member;
     if (args.mod) {
-      if (!(await hasPermission(pluginData, "can_act_as_other", { message: msg }))) {
-        sendErrorMessage(pluginData, msg.channel, "You don't have permission to use -mod");
+      if (
+        !(await hasPermission(pluginData, "can_act_as_other", { message: msg }))
+      ) {
+        sendErrorMessage(
+          pluginData,
+          msg.channel,
+          "You don't have permission to use -mod"
+        );
         return;
       }
 
@@ -53,13 +90,20 @@ export const AddCaseCmd = modActionsCmd({
     }
 
     // Verify the case type is valid
-    const type: string = args.type[0].toUpperCase() + args.type.slice(1).toLowerCase();
+    const type: string =
+      args.type[0].toUpperCase() + args.type.slice(1).toLowerCase();
     if (!CaseTypes[type]) {
-      sendErrorMessage(pluginData, msg.channel, "Cannot add case: invalid case type");
+      sendErrorMessage(
+        pluginData,
+        msg.channel,
+        "Cannot add case: invalid case type"
+      );
       return;
     }
 
-    const reason = formatReasonWithAttachments(args.reason, [...msg.attachments.values()]);
+    const reason = formatReasonWithAttachments(args.reason, [
+      ...msg.attachments.values(),
+    ]);
 
     // Create the case
     const casesPlugin = pluginData.getPlugin(CasesPlugin);
@@ -75,10 +119,14 @@ export const AddCaseCmd = modActionsCmd({
       sendSuccessMessage(
         pluginData,
         msg.channel,
-        `Case #${theCase.case_number} created for **${renderUsername(user)}**`,
+        `Case #${theCase.case_number} created for **${renderUsername(user)}**`
       );
     } else {
-      sendSuccessMessage(pluginData, msg.channel, `Case #${theCase.case_number} created`);
+      sendSuccessMessage(
+        pluginData,
+        msg.channel,
+        `Case #${theCase.case_number} created`
+      );
     }
 
     // Log the action

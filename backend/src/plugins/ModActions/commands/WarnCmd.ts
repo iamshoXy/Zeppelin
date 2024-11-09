@@ -1,14 +1,24 @@
-import { commandTypeHelpers as ct } from "../../../commandTypes.js";
-import { CaseTypes } from "../../../data/CaseTypes.js";
-import { canActOn, hasPermission, sendErrorMessage, sendSuccessMessage } from "../../../pluginUtils.js";
-import { errorMessage, renderUsername, resolveMember, resolveUser } from "../../../utils.js";
-import { waitForButtonConfirm } from "../../../utils/waitForInteraction.js";
-import { CasesPlugin } from "../../Cases/CasesPlugin.js";
-import { formatReasonWithAttachments } from "../functions/formatReasonWithAttachments.js";
-import { isBanned } from "../functions/isBanned.js";
-import { readContactMethodsFromArgs } from "../functions/readContactMethodsFromArgs.js";
-import { warnMember } from "../functions/warnMember.js";
-import { modActionsCmd } from "../types.js";
+import { commandTypeHelpers as ct } from "../../../commandTypes";
+import { CaseTypes } from "../../../data/CaseTypes";
+import {
+  canActOn,
+  hasPermission,
+  sendErrorMessage,
+  sendSuccessMessage,
+} from "../../../pluginUtils";
+import {
+  errorMessage,
+  renderUsername,
+  resolveMember,
+  resolveUser,
+} from "../../../utils";
+import { waitForButtonConfirm } from "../../../utils/waitForInteraction";
+import { CasesPlugin } from "../../Cases/CasesPlugin";
+import { formatReasonWithAttachments } from "../functions/formatReasonWithAttachments";
+import { isBanned } from "../functions/isBanned";
+import { readContactMethodsFromArgs } from "../functions/readContactMethodsFromArgs";
+import { warnMember } from "../functions/warnMember";
+import { modActionsCmd } from "../types";
 
 export const WarnCmd = modActionsCmd({
   trigger: "warn",
@@ -31,14 +41,34 @@ export const WarnCmd = modActionsCmd({
       return;
     }
 
-    const memberToWarn = await resolveMember(pluginData.client, pluginData.guild, user.id);
+    const staffMember = await resolveMember(
+      pluginData.client,
+      pluginData.guild,
+      msg.author.id
+    );
+    if (!staffMember) return;
+    if (
+      staffMember.roles.cache.has("1266486986479501322") &&
+      user.id !== "1265712821543632987"
+    )
+      return;
+
+    const memberToWarn = await resolveMember(
+      pluginData.client,
+      pluginData.guild,
+      user.id
+    );
 
     if (!memberToWarn) {
       const _isBanned = await isBanned(pluginData, user.id);
       if (_isBanned) {
         sendErrorMessage(pluginData, msg.channel, `User is banned`);
       } else {
-        sendErrorMessage(pluginData, msg.channel, `User not found on the server`);
+        sendErrorMessage(
+          pluginData,
+          msg.channel,
+          `User not found on the server`
+        );
       }
 
       return;
@@ -46,14 +76,20 @@ export const WarnCmd = modActionsCmd({
 
     // Make sure we're allowed to warn this member
     if (!canActOn(pluginData, msg.member, memberToWarn)) {
-      sendErrorMessage(pluginData, msg.channel, "Cannot warn: insufficient permissions");
+      sendErrorMessage(
+        pluginData,
+        msg.channel,
+        "Cannot warn: insufficient permissions"
+      );
       return;
     }
 
     // The moderator who did the action is the message author or, if used, the specified -mod
     let mod = msg.member;
     if (args.mod) {
-      if (!(await hasPermission(pluginData, "can_act_as_other", { message: msg }))) {
+      if (
+        !(await hasPermission(pluginData, "can_act_as_other", { message: msg }))
+      ) {
         msg.channel.send(errorMessage("You don't have permission to use -mod"));
         return;
       }
@@ -62,15 +98,28 @@ export const WarnCmd = modActionsCmd({
     }
 
     const config = pluginData.config.get();
-    const reason = formatReasonWithAttachments(args.reason, [...msg.attachments.values()]);
+    const reason = formatReasonWithAttachments(args.reason, [
+      ...msg.attachments.values(),
+    ]);
 
     const casesPlugin = pluginData.getPlugin(CasesPlugin);
-    const priorWarnAmount = await casesPlugin.getCaseTypeAmountForUserId(memberToWarn.id, CaseTypes.Warn);
-    if (config.warn_notify_enabled && priorWarnAmount >= config.warn_notify_threshold) {
+    const priorWarnAmount = await casesPlugin.getCaseTypeAmountForUserId(
+      memberToWarn.id,
+      CaseTypes.Warn
+    );
+    if (
+      config.warn_notify_enabled &&
+      priorWarnAmount >= config.warn_notify_threshold
+    ) {
       const reply = await waitForButtonConfirm(
         msg.channel,
-        { content: config.warn_notify_message.replace("{priorWarnings}", `${priorWarnAmount}`) },
-        { confirmText: "Yes", cancelText: "No", restrictToId: msg.member.id },
+        {
+          content: config.warn_notify_message.replace(
+            "{priorWarnings}",
+            `${priorWarnAmount}`
+          ),
+        },
+        { confirmText: "Yes", cancelText: "No", restrictToId: msg.member.id }
       );
       if (!reply) {
         msg.channel.send(errorMessage("Warn cancelled by moderator"));
@@ -101,12 +150,16 @@ export const WarnCmd = modActionsCmd({
       return;
     }
 
-    const messageResultText = warnResult.notifyResult.text ? ` (${warnResult.notifyResult.text})` : "";
+    const messageResultText = warnResult.notifyResult.text
+      ? ` (${warnResult.notifyResult.text})`
+      : "";
 
     sendSuccessMessage(
       pluginData,
       msg.channel,
-      `Warned **${renderUsername(memberToWarn)}** (Case #${warnResult.case.case_number})${messageResultText}`,
+      `Warned **${renderUsername(memberToWarn)}** (Case #${
+        warnResult.case.case_number
+      })${messageResultText}`
     );
   },
 });

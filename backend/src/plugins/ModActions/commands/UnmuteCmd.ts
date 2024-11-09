@@ -1,11 +1,11 @@
-import { commandTypeHelpers as ct } from "../../../commandTypes.js";
-import { MutesPlugin } from "../../../plugins/Mutes/MutesPlugin.js";
-import { canActOn, sendErrorMessage } from "../../../pluginUtils.js";
-import { resolveMember, resolveUser } from "../../../utils.js";
-import { waitForButtonConfirm } from "../../../utils/waitForInteraction.js";
-import { actualUnmuteCmd } from "../functions/actualUnmuteUserCmd.js";
-import { isBanned } from "../functions/isBanned.js";
-import { modActionsCmd } from "../types.js";
+import { commandTypeHelpers as ct } from "../../../commandTypes";
+import { MutesPlugin } from "../../../plugins/Mutes/MutesPlugin";
+import { canActOn, sendErrorMessage } from "../../../pluginUtils";
+import { resolveMember, resolveUser } from "../../../utils";
+import { waitForButtonConfirm } from "../../../utils/waitForInteraction";
+import { actualUnmuteCmd } from "../functions/actualUnmuteUserCmd";
+import { isBanned } from "../functions/isBanned";
+import { modActionsCmd } from "../types";
 
 const opts = {
   mod: ct.member({ option: true }),
@@ -39,9 +39,26 @@ export const UnmuteCmd = modActionsCmd({
       return;
     }
 
-    const memberToUnmute = await resolveMember(pluginData.client, pluginData.guild, user.id);
+    const staffMember = await resolveMember(
+      pluginData.client,
+      pluginData.guild,
+      msg.author.id
+    );
+    if (!staffMember) return;
+    if (
+      staffMember.roles.cache.has("1266486986479501322") &&
+      user.id !== "1265712821543632987"
+    )
+      return;
+
+    const memberToUnmute = await resolveMember(
+      pluginData.client,
+      pluginData.guild,
+      user.id
+    );
     const mutesPlugin = pluginData.getPlugin(MutesPlugin);
-    const hasMuteRole = memberToUnmute && mutesPlugin.hasMutedRole(memberToUnmute);
+    const hasMuteRole =
+      memberToUnmute && mutesPlugin.hasMutedRole(memberToUnmute);
 
     // Check if they're muted in the first place
     if (
@@ -49,7 +66,11 @@ export const UnmuteCmd = modActionsCmd({
       !hasMuteRole &&
       !memberToUnmute?.isCommunicationDisabled()
     ) {
-      sendErrorMessage(pluginData, msg.channel, "Cannot unmute: member is not muted");
+      sendErrorMessage(
+        pluginData,
+        msg.channel,
+        "Cannot unmute: member is not muted"
+      );
       return;
     }
 
@@ -60,7 +81,7 @@ export const UnmuteCmd = modActionsCmd({
         sendErrorMessage(
           pluginData,
           msg.channel,
-          `User is banned. Use \`${prefix}forceunmute\` to unmute them anyway.`,
+          `User is banned. Use \`${prefix}forceunmute\` to unmute them anyway.`
         );
         return;
       } else {
@@ -68,11 +89,15 @@ export const UnmuteCmd = modActionsCmd({
         const reply = await waitForButtonConfirm(
           msg.channel,
           { content: "User not on server, forceunmute instead?" },
-          { confirmText: "Yes", cancelText: "No", restrictToId: msg.member.id },
+          { confirmText: "Yes", cancelText: "No", restrictToId: msg.member.id }
         );
 
         if (!reply) {
-          sendErrorMessage(pluginData, msg.channel, "User not on server, unmute cancelled by moderator");
+          sendErrorMessage(
+            pluginData,
+            msg.channel,
+            "User not on server, unmute cancelled by moderator"
+          );
           return;
         }
       }
@@ -80,7 +105,11 @@ export const UnmuteCmd = modActionsCmd({
 
     // Make sure we're allowed to unmute this member
     if (memberToUnmute && !canActOn(pluginData, msg.member, memberToUnmute)) {
-      sendErrorMessage(pluginData, msg.channel, "Cannot unmute: insufficient permissions");
+      sendErrorMessage(
+        pluginData,
+        msg.channel,
+        "Cannot unmute: insufficient permissions"
+      );
       return;
     }
 

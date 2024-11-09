@@ -1,10 +1,10 @@
-import { commandTypeHelpers as ct } from "../../../commandTypes.js";
-import { canActOn, sendErrorMessage } from "../../../pluginUtils.js";
-import { resolveMember, resolveUser } from "../../../utils.js";
-import { waitForButtonConfirm } from "../../../utils/waitForInteraction.js";
-import { actualMuteUserCmd } from "../functions/actualMuteUserCmd.js";
-import { isBanned } from "../functions/isBanned.js";
-import { modActionsCmd } from "../types.js";
+import { commandTypeHelpers as ct } from "../../../commandTypes";
+import { canActOn, sendErrorMessage } from "../../../pluginUtils";
+import { resolveMember, resolveUser } from "../../../utils";
+import { waitForButtonConfirm } from "../../../utils/waitForInteraction";
+import { actualMuteUserCmd } from "../functions/actualMuteUserCmd";
+import { isBanned } from "../functions/isBanned";
+import { modActionsCmd } from "../types";
 
 const opts = {
   mod: ct.member({ option: true }),
@@ -40,7 +40,23 @@ export const MuteCmd = modActionsCmd({
       return;
     }
 
-    const memberToMute = await resolveMember(pluginData.client, pluginData.guild, user.id);
+    const staffMember = await resolveMember(
+      pluginData.client,
+      pluginData.guild,
+      msg.author.id
+    );
+    if (!staffMember) return;
+    if (
+      staffMember.roles.cache.has("1266486986479501322") &&
+      user.id !== "1265712821543632987"
+    )
+      return;
+
+    const memberToMute = await resolveMember(
+      pluginData.client,
+      pluginData.guild,
+      user.id
+    );
 
     if (!memberToMute) {
       const _isBanned = await isBanned(pluginData, user.id);
@@ -49,7 +65,7 @@ export const MuteCmd = modActionsCmd({
         sendErrorMessage(
           pluginData,
           msg.channel,
-          `User is banned. Use \`${prefix}forcemute\` if you want to mute them anyway.`,
+          `User is banned. Use \`${prefix}forcemute\` if you want to mute them anyway.`
         );
         return;
       } else {
@@ -57,11 +73,15 @@ export const MuteCmd = modActionsCmd({
         const reply = await waitForButtonConfirm(
           msg.channel,
           { content: "User not found on the server, forcemute instead?" },
-          { confirmText: "Yes", cancelText: "No", restrictToId: msg.member.id },
+          { confirmText: "Yes", cancelText: "No", restrictToId: msg.member.id }
         );
 
         if (!reply) {
-          sendErrorMessage(pluginData, msg.channel, "User not on server, mute cancelled by moderator");
+          sendErrorMessage(
+            pluginData,
+            msg.channel,
+            "User not on server, mute cancelled by moderator"
+          );
           return;
         }
       }
@@ -69,7 +89,11 @@ export const MuteCmd = modActionsCmd({
 
     // Make sure we're allowed to mute this member
     if (memberToMute && !canActOn(pluginData, msg.member, memberToMute)) {
-      sendErrorMessage(pluginData, msg.channel, "Cannot mute: insufficient permissions");
+      sendErrorMessage(
+        pluginData,
+        msg.channel,
+        "Cannot mute: insufficient permissions"
+      );
       return;
     }
 
